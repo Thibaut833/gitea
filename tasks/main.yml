@@ -1,0 +1,108 @@
+---
+# tasks file for gitea
+- name: Je réactive le swap
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    line: "/dev/mapper/template--vg-swap_1 none            swap    sw              0       0"
+    state: present
+    insertafter: EOF
+  register: enable_swap
+
+- name: Je redémarre la vm
+  ansible.builtin.reboot:
+    connect_timeout: 20
+    msg: "Reboot pour réactivation du swap"
+  when: enable_swap.changed
+
+- name: Installation de podman
+  block:
+    - name: J'installe podman
+      ansible.builtin.apt:
+        name: podman
+        state: present
+        update_cache: true
+
+    - name: J'installe la lib python podman
+      ansible.builtin.pip:
+        name: podman
+        state: present
+        extra_args: "--break-system-packages"
+
+- name: J'installe Gitea
+  block:
+    - name: Je crée le dossier gitea
+      ansible.builtin.file:
+        path: /data/gitea
+        mode: "770"
+        recurse: true
+        owner: 1000
+        group: 1000
+        state: directory
+
+    - name: Je crée le réseau Gitea
+      containers.podman.podman_network:
+        name: gitea
+        ipv6: false
+        subnet: "172.16.33.0/24"
+
+    - name: Je crée le pod pour Gitea
+      containers.podman.podman_pod:
+        name: "gitea_pod"
+        state: created
+        network: gitea
+        hostname: "gitea_pod"
+
+    - name: Je crée le container Gitea
+      containers.podman.podman_container:
+        name: "cgitea"
+        pod: "gitea_pod"
+        state: started
+        image: "docker.io/gitea/gitea:{{ version_gitea }}"
+        detach: true
+        network: gitea
+        env:
+          GITEA__actions__ENABLED=true
+          USER_UID=1000
+          USER_GID=1000
+        ports:
+          - "3322:22"
+        restart_policy: always
+        volumes:
+          - /data/gitea:/data
+          - /etc/timezone:/etc/timezone:ro
+          - /etc/localtime:/etc/localtime:ro
+
+- name: J'installe nginx
+  block:
+    - name: Je crée le folder pour nginx
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: "770"
+        owner: root
+        group: root
+        state: directory
+      loop:
+        - /data/nginx
+        - /data/nginx/conf
+
+    - name: Je copie la conf du proxy
+      ansible.builtin.copy:
+        src: "{{ role_path }}/files/gitea.blasi.home.conf"
+        dest: "/data/nginx/conf/gitea.blasi.home.conf"
+        mode: "770"
+
+    - name: Je crée le container nginx
+      containers.podman.podman_container:
+        name: "cnginx"
+        pod: "gitea_pod"
+        state: started
+        image: "docker.io/nginx:{{ version_nginx }}"
+        detach: true
+        network: gitea
+        ports:
+          - "80:80"
+          - "443:443"
+        restart_policy: always
+        volumes:
+          - /data/ca_ansible/gitea:/etc/nginx/certs
+          - /data/nginx/conf/:/etc/nginx/conf.d/
