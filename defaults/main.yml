@@ -3,3 +3,4 @@
 
 version_gitea: "1.19"
 version_nginx: "stable-alpine3.17-slim"
+version_dronesrv: "2.18"
