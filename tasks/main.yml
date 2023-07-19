@@ -92,6 +92,7 @@
         mode: "770"
       loop:
         - gitea
+        - drone
 
     - name: Je crée le container nginx
       containers.podman.podman_container:
