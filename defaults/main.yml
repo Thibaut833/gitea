@@ -1,5 +1,5 @@
 ---
 # defaults file for gitea
 
-version_gitea: "1.20"
-version_nginx: "stable-alpine3.17-slim"
+version_gitea: "1.20.4"
+version_npm: "2.10.4"

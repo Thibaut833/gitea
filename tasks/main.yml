@@ -72,40 +72,42 @@
           - /etc/timezone:/etc/timezone:ro
           - /etc/localtime:/etc/localtime:ro
 
-- name: J'installe nginx
+- name: J'installe Nginx Proxy Manager
   block:
-    - name: Je crée le folder pour nginx
+    - name: Je crée le dossier npm
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: /data/npm
         mode: "770"
-        owner: root
-        group: root
+        recurse: true
+        owner: 1000
+        group: 1000
         state: directory
-      loop:
-        - /data/nginx
-        - /data/nginx/conf
 
-    - name: Je copie la conf du proxy
-      ansible.builtin.copy:
-        src: "{{ role_path }}/files/{{ item }}.blasi.home.conf"
-        dest: "/data/nginx/conf/{{ item }}.blasi.home.conf"
+    - name: Je crée le dossier npm data et letsencrypt
+      ansible.builtin.file:
+        path: "/data/npm/{{ item }}"
         mode: "770"
-      loop:
-        - gitea
-        - drone
+        recurse: true
+        owner: 1000
+        group: 1000
+        state: directory
+        loop:
+          - "data"
+          - "letsencrypt"
 
-    - name: Je crée le container nginx
+    - name: Je crée le container Nginx Proxy Manager
       containers.podman.podman_container:
-        name: "cnginx"
+        name: "cnpm"
         pod: "gitea_pod"
         state: started
-        image: "docker.io/nginx:{{ version_nginx }}"
+        image: "jc21/nginx-proxy-manager::{{ version_npm }}"
         detach: true
         network: gitea
         ports:
           - "80:80"
+          - "81:81"
           - "443:443"
-        restart_policy: always
+        restart_policy: unless-stopped
         volumes:
-          - /data/ca_ansible/gitea:/etc/nginx/certs
-          - /data/nginx/conf/:/etc/nginx/conf.d/
+          - /data/npm/data:/data
+          - /data/npm/letsencrypt:/etc/letsencrypt
