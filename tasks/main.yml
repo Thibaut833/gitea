@@ -100,7 +100,7 @@
         name: "cnpm"
         pod: "gitea_pod"
         state: started
-        image: "jc21/nginx-proxy-manager::{{ version_npm }}"
+        image: "jc21/nginx-proxy-manager:{{ version_npm }}"
         detach: true
         network: gitea
         ports:
