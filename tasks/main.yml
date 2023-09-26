@@ -91,9 +91,9 @@
         owner: 1000
         group: 1000
         state: directory
-        loop:
-          - "data"
-          - "letsencrypt"
+      loop:
+        - "data"
+        - "letsencrypt"
 
     - name: Je crée le container Nginx Proxy Manager
       containers.podman.podman_container:
