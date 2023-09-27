@@ -107,7 +107,7 @@
           - "80:80"
           - "81:81"
           - "443:443"
-        restart_policy: unless-stopped
+        restart_policy: always
         volumes:
           - /data/npm/data:/data
           - /data/npm/letsencrypt:/etc/letsencrypt
